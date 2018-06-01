@@ -26,6 +26,12 @@ AC_DEFUN([LIBVIRT_DRIVER_ARG_QEMU], [
 ])
 
 AC_DEFUN([LIBVIRT_DRIVER_CHECK_QEMU], [
+  AC_REQUIRE([LIBVIRT_CHECK_GNUTLS])
+
+  if test "$with_qemu" = "yes" && test "$with_gnutls" != "yes" ; then
+      AC_MSG_ERROR([gnutls is required for the QEMU driver])
+  fi
+
   if test "$with_qemu" = "yes" ; then
     AC_DEFINE_UNQUOTED([WITH_QEMU], 1, [whether QEMU driver is enabled])
   fi
