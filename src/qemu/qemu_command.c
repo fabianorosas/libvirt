@@ -7101,7 +7101,7 @@ qemuBuildNameCommandLine(virCommandPtr cmd,
 
 static int
 qemuBuildMachineCommandLine(virCommandPtr cmd,
-                            virQEMUDriverConfigPtr cfg,
+                            virQEMUDriverPtr driver,
                             const virDomainDef *def,
                             virQEMUCapsPtr qemuCaps)
 {
@@ -7109,6 +7109,7 @@ qemuBuildMachineCommandLine(virCommandPtr cmd,
     virTristateSwitch smm = def->features[VIR_DOMAIN_FEATURE_SMM];
     virCPUDefPtr cpu = def->cpu;
     VIR_AUTOCLEAN(virBuffer) buf = VIR_BUFFER_INITIALIZER;
+    VIR_AUTOUNREF(virQEMUDriverConfigPtr) cfg = virQEMUDriverGetConfig(driver);
     size_t i;
 
     /* This should *never* be NULL, since we always provide
@@ -7382,6 +7383,10 @@ qemuBuildMachineCommandLine(virCommandPtr cmd,
 
     if (def->sev)
         virBufferAddLit(&buf, ",memory-encryption=sev0");
+
+    if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_MACHINE_PSERIES_HOST_MODEL) &&
+        driver->hostsysinfo && driver->hostsysinfo->system)
+        virBufferAsprintf(&buf, ",host-model=%s", driver->hostsysinfo->system->serial);
 
     virCommandAddArgBuffer(cmd, &buf);
 
@@ -10223,7 +10228,7 @@ qemuBuildCommandLine(virQEMUDriverPtr driver,
     if (enableFips)
         virCommandAddArg(cmd, "-enable-fips");
 
-    if (qemuBuildMachineCommandLine(cmd, cfg, def, qemuCaps) < 0)
+    if (qemuBuildMachineCommandLine(cmd, driver, def, qemuCaps) < 0)
         return NULL;
 
     qemuBuildTSEGCommandLine(cmd, def);
