@@ -7071,6 +7071,25 @@ qemuAppendLoadparmMachineParm(virBuffer *buf,
     }
 }
 
+static void
+qemuAppendHostModelMachineParm(virBuffer *buf,
+                               virSysinfoDefPtr def,
+                               virQEMUDriverConfigPtr cfg)
+{
+    if (!cfg->host_model)
+        return;
+
+    if (STREQ(cfg->host_model, "passthrough")) {
+        if (!def->system)
+            return;
+
+        virBufferAddLit(buf, ",host-model=");
+        virQEMUBuildBufferEscapeComma(buf, def->system->serial);
+    } else {
+        virBufferAddLit(buf, ",host-model=");
+        virQEMUBuildBufferEscapeComma(buf, cfg->host_model);
+    }
+}
 
 static int
 qemuBuildNameCommandLine(virCommandPtr cmd,
@@ -7384,9 +7403,9 @@ qemuBuildMachineCommandLine(virCommandPtr cmd,
     if (def->sev)
         virBufferAddLit(&buf, ",memory-encryption=sev0");
 
-    if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_MACHINE_PSERIES_HOST_MODEL) &&
-        driver->hostsysinfo && driver->hostsysinfo->system)
-        virBufferAsprintf(&buf, ",host-model=%s", driver->hostsysinfo->system->serial);
+    if (driver->hostsysinfo &&
+        virQEMUCapsGet(qemuCaps, QEMU_CAPS_MACHINE_PSERIES_HOST_MODEL))
+        qemuAppendHostModelMachineParm(&buf, driver->hostsysinfo, cfg);
 
     virCommandAddArgBuffer(cmd, &buf);
 

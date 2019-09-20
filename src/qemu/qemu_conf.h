@@ -214,6 +214,8 @@ struct _virQEMUDriverConfig {
     gid_t swtpm_group;
 
     char **capabilityfilters;
+
+    char *host_model;
 };
 
 /* Main driver state */

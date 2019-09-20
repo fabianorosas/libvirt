@@ -389,6 +389,8 @@ static void virQEMUDriverConfigDispose(void *obj)
     VIR_FREE(cfg->swtpmStorageDir);
 
     virStringListFree(cfg->capabilityfilters);
+
+    VIR_FREE(cfg->host_model);
 }
 
 
@@ -1009,6 +1011,17 @@ virQEMUDriverConfigLoadCapsFiltersEntry(virQEMUDriverConfigPtr cfg,
 }
 
 
+static int
+virQEMUDriverConfigLoadHostModelEntry(virQEMUDriverConfigPtr cfg,
+                                      virConfPtr conf)
+{
+    if (virConfGetValueString(conf, "host_model", &cfg->host_model) < 0)
+        return -1;
+
+    return 0;
+}
+
+
 int virQEMUDriverConfigLoadFile(virQEMUDriverConfigPtr cfg,
                                 const char *filename,
                                 bool privileged)
@@ -1079,6 +1092,9 @@ int virQEMUDriverConfigLoadFile(virQEMUDriverConfigPtr cfg,
         goto cleanup;
 
     if (virQEMUDriverConfigLoadCapsFiltersEntry(cfg, conf) < 0)
+        goto cleanup;
+
+    if (virQEMUDriverConfigLoadHostModelEntry(cfg, conf) < 0)
         goto cleanup;
 
     ret = 0;
