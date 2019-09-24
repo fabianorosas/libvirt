@@ -1104,6 +1104,36 @@ int virQEMUDriverConfigLoadFile(virQEMUDriverConfigPtr cfg,
     return ret;
 }
 
+static bool
+qemuValidateHostModel(virQEMUDriverConfigPtr cfg)
+{
+    VIR_AUTOFREE(char *) regex = NULL;
+
+    if (STREQ(cfg->host_model, "passthrough"))
+        return true;
+
+    /*
+      The Linux on Power Architecture Platform Reference (LoPAPR)
+      document specifies under System Identification (R1–12.2–13) the
+      format of the "model" property:
+
+          <vendor>,xxxx-yyy
+
+          where <vendor> is replaced by one to five letters representing
+          the stock symbol of the company (for example, for IBM:
+          “IBM,xxxx-yyy”), and where xxxx-yyy is derived from the Vital
+          Product Data (VPD) Type/Model (TM) field
+
+      Note: the regular expression below also allows for the empty
+      string, which is the default setting.
+    */
+    ignore_value(
+        VIR_STRDUP(regex, "^([A-Z]{1,5},)?([[:print:]]{4}-[[:print:]]{3})?$"));
+    if (virStringMatch(cfg->host_model, regex))
+        return true;
+
+    return false;
+}
 
 /**
  * @cfg: Recently read config values
@@ -1170,6 +1200,12 @@ virQEMUDriverConfigValidate(virQEMUDriverConfigPtr cfg)
         virReportError(VIR_ERR_CONF_SYNTAX,
                        _("nbd_tls_x509_cert_dir directory '%s' does not exist"),
                        cfg->nbdTLSx509certdir);
+        return -1;
+    }
+
+    if (cfg->host_model && !qemuValidateHostModel(cfg)) {
+        virReportError(VIR_ERR_CONF_SYNTAX,
+                       _("invalid host model '%s'"), cfg->host_model);
         return -1;
     }
 
